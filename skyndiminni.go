@@ -104,7 +104,29 @@ func (c *Cache) Set(key string, value interface{}, expirationTime int64) (*Item,
 // if setIfNotExist is true will create new key/value if not exists
 // if setIfNotExist is false then will return an error that key already exists
 func (c *Cache) Update(key string, value interface{}, expirationTime int64, setIfNotExist bool) (*Item, error) {
-	return nil, nil
+	c.mut.Lock()
+	item := c.items[key]
+
+	if setIfNotExist {
+		item = &Item{
+			Value:        value,
+			Expiration:   expirationTime,
+			creationTime: time.Now().Unix(),
+		}
+	} else {
+		if item == nil {
+			return nil, errors.New("key does not exist")
+		}
+		item = &Item{
+			Value:        value,
+			Expiration:   expirationTime,
+			creationTime: time.Now().Unix(),
+		}
+	}
+
+	c.items[key] = item
+	c.mut.Unlock()
+	return item, nil
 }
 
 func (c *cache) initExpiration() {
